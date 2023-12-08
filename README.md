@@ -2,7 +2,10 @@
 
 
 Image Conversion and Video Generation Tool
+
+
 This tool provides a simple graphical interface to convert images in a folder to JPG format, naming them with a structured "####.jpg" pattern. Additionally, it can generate a video from these images using ffmpeg.
+
 
 Usage Instructions:
 Installation:
