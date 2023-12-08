@@ -12,6 +12,7 @@ Installation:
 
 Ensure you have Python installed on your system.
 Download the script files to your preferred directory.
+
 Requirements:
 
 The script relies on Python and ffmpeg. Make sure both are installed on your machine and are added to system PATH.
