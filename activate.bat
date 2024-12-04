@@ -9,9 +9,6 @@ python -V
 where ffmpeg
 where ffplay
 echo.
-echo You can now install the requirements using:
-echo pip install -r .\requirements.txt
-echo.
 
 if not exist !venv_dir! (
     python -m venv !venv_dir!

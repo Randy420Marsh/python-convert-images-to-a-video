@@ -10,3 +10,4 @@ echo "venv activated"
 python --version
 echo.
 python -s convert-images-gui.py
+pause

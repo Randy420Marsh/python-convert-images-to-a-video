@@ -10,3 +10,4 @@ echo "venv activated"
 python --version
 echo.
 python -s python-convert-images-to-a-video.py
+pause

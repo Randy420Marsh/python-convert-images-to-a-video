@@ -19,20 +19,23 @@ class ImageToVideoConverter:
         self.output_jpg_folder = ""
         self.fps = tk.StringVar()
         self.fps.set("30")
+        self.scale_resolution = tk.StringVar()
+        self.scale_resolution.set("")  # Default value (no scaling)
+        self.input_video_file = ""
         self.video_process = None
         self.jpg_process = None
         self.create_widgets()
 
     def create_widgets(self):
-        # Input images to video folder
-        input_video_label = tk.Label(self.root, text="Input Images To Video Folder:")
+        # Sorted img2vid Folder
+        input_video_label = tk.Label(self.root, text="Sorted img2vid Folder:")
         input_video_label.pack()
         input_images_to_video_folder_label = tk.Label(self.root, text="")
         input_images_to_video_folder_label.pack()
         input_video_button = tk.Button(self.root, text="Browse", command=self.browse_input_images_to_video_folder)
         input_video_button.pack()
 
-        # Output video folder
+        # Output Video Folder
         output_video_label = tk.Label(self.root, text="Output Video Folder:")
         output_video_label.pack()
         output_video_folder_label = tk.Label(self.root, text="")
@@ -40,16 +43,16 @@ class ImageToVideoConverter:
         output_video_button = tk.Button(self.root, text="Browse", command=self.browse_output_video_folder)
         output_video_button.pack()
 
-        # Input Image folder
-        input_image_label = tk.Label(self.root, text="Input Image Folder:")
+        # Input Unsorted Image Folder
+        input_image_label = tk.Label(self.root, text="Input Unsorted Image Folder:")
         input_image_label.pack()
         input_image_folder_label = tk.Label(self.root, text="")
         input_image_folder_label.pack()
         input_image_button = tk.Button(self.root, text="Browse", command=self.browse_input_image_folder)
         input_image_button.pack()
 
-        # Output JPG folder
-        output_jpg_label = tk.Label(self.root, text="Output JPG Folder:")
+        # Output JPG folder (Sorted img2vid folder)
+        output_jpg_label = tk.Label(self.root, text="Output JPG folder (Sorted img2vid folder):")
         output_jpg_label.pack()
         output_jpg_folder_label = tk.Label(self.root, text="")
         output_jpg_folder_label.pack()
@@ -62,6 +65,12 @@ class ImageToVideoConverter:
         fps_entry = tk.Entry(self.root, textvariable=self.fps)
         fps_entry.pack()
 
+        # Resolution Scaling Input
+        scale_label = tk.Label(self.root, text="Scale Resolution (e.g., 1280x720):")
+        scale_label.pack()
+        scale_entry = tk.Entry(self.root, textvariable=self.scale_resolution)
+        scale_entry.pack()
+
         # Convert Video button
         convert_video_button = tk.Button(self.root, text="Convert to Video", command=self.convert_to_video)
         convert_video_button.pack()
@@ -73,6 +82,12 @@ class ImageToVideoConverter:
         convert_jpg_button.pack()
         self.jpg_progress = Progressbar(self.root, orient="horizontal", length=300, mode="determinate")
         self.jpg_progress.pack()
+
+        # Browse Existing Video button
+        existing_video_label = tk.Label(self.root, text="Select Existing Video to Scale:")
+        existing_video_label.pack()
+        existing_video_button = tk.Button(self.root, text="Browse", command=self.browse_existing_video)
+        existing_video_button.pack()
 
         # Cancel button
         cancel_button = tk.Button(self.root, text="Cancel", command=self.cancel_conversion, state=tk.DISABLED)
@@ -113,6 +128,11 @@ class ImageToVideoConverter:
             output_jpg_folder_label = self.root.nametowidget(self.root.winfo_children()[11])
             output_jpg_folder_label.config(text=f"Output JPG Folder: {self.output_jpg_folder}")
 
+    def browse_existing_video(self):
+        self.input_video_file = filedialog.askopenfilename(filetypes=[("MP4 files", "*.mp4"), ("All files", "*.*")])
+        if self.input_video_file:
+            print(f"Existing Video Selected: {self.input_video_file}")
+
     def convert_to_video(self):
         if not self.input_images_to_video_folder or not self.output_video_folder:
             messagebox.showerror("Error", "Please select input and output video folders.")
@@ -134,8 +154,16 @@ class ImageToVideoConverter:
         else:
             self.image_extension = 'png'
 
+        # If a scaling resolution is provided, include the scale filter in the ffmpeg command
+        scale_option = ""
+        scale_resolution = self.scale_resolution.get().strip()
+        if scale_resolution:
+            scale_option = f"-vf scale={scale_resolution}"
+
+        # Construct the ffmpeg command for images-to-video conversion
         command = [
             "ffmpeg", "-framerate", self.fps.get(), "-i", f"{self.input_images_to_video_folder}/%04d.{self.image_extension}",
+            scale_option,  # Add scaling option if present
             "-c:v", "libx264", "-preset", "slow", "-profile:v", "high", "-crf", "25",
             "-minrate:v", "6M", "-b:v", "6M", "-maxrate:v", "6M", "-bufsize:v", "6M",
             "-coder", "1", "-pix_fmt", "yuv420p", "-g", "120", "-bf", "2", "-f", "mp4",
@@ -156,14 +184,28 @@ class ImageToVideoConverter:
             self.video_progress.update()
             self.video_process.communicate()
             self.cancel_button.config(state=tk.DISABLED)
-
-            if self.get_expected_video_filename() == self.get_expected_video_filename():
-                messagebox.showinfo("Success", "Conversion completed successfully.")
-                self.preview_button.config(state=tk.NORMAL)
-            else:
-                messagebox.showerror("Error", "Conversion failed. Output filename does not match the expected filename. Please check the output folder.")
+            messagebox.showinfo("Success", "Video creation completed successfully.")
         except Exception as e:
-            messagebox.showerror("Error", f"An error occurred during conversion: {e}")
+            print(f"Error in video conversion: {e}")
+
+    def convert_video(self):
+        if self.input_video_file:
+            scale_resolution = self.scale_resolution.get().strip()
+            if scale_resolution:
+                scale_option = f"-vf scale={scale_resolution}"
+                output_file = os.path.join(self.output_video_folder, "scaled_video.mp4")
+                command = [
+                    "ffmpeg", "-i", self.input_video_file, scale_option, output_file
+                ]
+                try:
+                    subprocess.run(command, check=True)
+                    messagebox.showinfo("Success", "Video scaling completed successfully.")
+                except subprocess.CalledProcessError as e:
+                    messagebox.showerror("Error", f"An error occurred while scaling the video: {e}")
+            else:
+                messagebox.showerror("Error", "Please provide a resolution to scale the video.")
+        else:
+            messagebox.showerror("Error", "Please select a video to scale.")
 
     def convert_to_jpg(self):
         if not self.input_image_folder or not self.output_jpg_folder:
@@ -217,6 +259,7 @@ class ImageToVideoConverter:
     def get_expected_video_filename(self):
         current_datetime = datetime.now()
         return f"{current_datetime.strftime('%d-%m-%Y-%H-%M-%S.mp4')}"
+
 
 if __name__ == "__main__":
     root = tk.Tk()
